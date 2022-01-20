@@ -16,6 +16,8 @@
   },
   "dependencies": {
     "babel-plugin-styled-components": "^2.0.2",
+    "canvas": "^2.9.0",
+    "firebase": "^9.6.3",
     "gatsby": "^4.5.4",
     "gatsby-plugin-image": "^2.5.2",
     "gatsby-plugin-manifest": "^4.5.2",
