@@ -55,7 +55,7 @@ const getOrCreateUser = (boardRef, cb) => {
         const color = colors.shift() || '#000';
         set(colorsRef, colors?.length || null);
         
-        const newUserRef = push(usersRef);
+        const newUserRef = push(child(boardRef, 'users'));
         set(newUserRef, { color });
         localforage.setItem(USER_ID_KEY, newUserRef.key);
         cb(newUserRef.key);
