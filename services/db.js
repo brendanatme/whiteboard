@@ -5,11 +5,13 @@ import {
   get,
   getDatabase,
   onChildChanged,
+  onValue,
   push,
   ref,
   set,
 } from 'firebase/database';
 import localforage from 'localforage';
+import { useDeepCompareEffect } from './helpers';
 
 /**
  * Your web app's Firebase configuration
@@ -51,9 +53,13 @@ const getOrCreateUser = (boardRef, cb) => {
     } else {
       const colorsRef = child(boardRef, 'colors');
       get(colorsRef).then((colorsSnap) => {
-        const colors = colorsSnap.exists() ? colorsSnap.val() : [];
+        const colorMap = colorsSnap.exists() ? colorsSnap.val() : {};
+        const colors = [];
+        Object.values(colorMap).map((val) => {
+          colors.push(val);
+        });
         const color = colors.shift() || '#000';
-        set(colorsRef, colors?.length || null);
+        set(colorsRef, colors.length ? colors : null);
         
         const newUserRef = push(child(boardRef, 'users'));
         set(newUserRef, { color });
@@ -70,15 +76,17 @@ const getOrCreateUser = (boardRef, cb) => {
  * when a user data is changed in db,
  * update here
  */
-const subscribeToUserChanges = (userId, boardRef, cb) => {
+const subscribeToUserChanges = (userId, boardRef, cb, batchCb) => {
   const usersRef = child(boardRef, 'users');
 
   get(usersRef).then((snapshot) => {
-    const userMap = snapshot.val();
+    const userMap = snapshot.exists() ? snapshot.val() : {};
+    const userUpdate = {};
     Object.keys(userMap).map((key) => {
       const user = userMap[key];
-      cb(key, user);
+      userUpdate[key] = user;
     });
+    batchCb(userUpdate);
   });
 
   onChildChanged(usersRef, (snapshot) => {
@@ -94,7 +102,7 @@ const subscribeToUserChanges = (userId, boardRef, cb) => {
  *
  * when line changes are made in the db, update here
  */
-const subscribeToLineChanges = (userId, boardRef, cb, seedMyLines) => {
+const subscribeToLineChanges = (userId, boardRef, cb, seedMyLines, reset) => {
   const linesRef = child(boardRef, 'lines');
 
   get(linesRef).then((snapshot) => {
@@ -106,7 +114,6 @@ const subscribeToLineChanges = (userId, boardRef, cb, seedMyLines) => {
     
     Object.keys(linesMap).map((key) => {
       const lines = linesMap[key];
-      console.log('get lines ref: key', key, 'userId', userId);
       if (key === userId) {
         seedMyLines(lines)
       } else {
@@ -116,11 +123,16 @@ const subscribeToLineChanges = (userId, boardRef, cb, seedMyLines) => {
   });
 
   onChildChanged(linesRef, (snapshot) => {
-    console.log('on line child changed: key', snapshot.key, 'userId', userId);
     if (snapshot.key === userId) {
       return;
     }
     cb(snapshot.key, snapshot.val());
+  });
+
+  onValue(linesRef, (snapshot) => {
+    if (!snapshot.exists()) {
+      reset();
+    }
   });
 };
 
@@ -131,6 +143,8 @@ export const useBoardData = (boardId) => {
   const [_myLines, _setMyLines] = useState([]);
   const [userLineGroups, setUserLineGroups] = useState([]);
 
+  const getUsers = () => users;
+  const getLines = () => lines;
   const boardRef = ref(db, `boards/${boardId}`);
 
   /**
@@ -149,17 +163,17 @@ export const useBoardData = (boardId) => {
      * watch for all board user changes (IE. a board user was added)
      */
     subscribeToUserChanges(userId, boardRef, (id, data) => setUsers({
-      ...users,
+      ...getUsers(),
       [id]: data,
-    }));
+    }), setUsers);
 
     /**
      * watch for all line changes (IE. a line is being drawn)
      */
     subscribeToLineChanges(userId, boardRef, (id, data) => setLines({
-      ...lines,
+      ...getLines(),
       [id]: data,
-    }), _setMyLines);
+    }), _setMyLines, () => setLines({}));
   }, [userId]);
 
   /**
@@ -167,17 +181,17 @@ export const useBoardData = (boardId) => {
    * compute linesArray
    * (merges user color with line data)
    */
-  useEffect(() => {
+  useDeepCompareEffect(() => {
     const _lineGroups = [];
     Object.keys(lines).map((key) => {
       const nestedLines = lines[key];
       _lineGroups.push({
-        color: users[key].color,
+        color: users[key]?.color || '#000',
         lines: nestedLines,
       });
     });
     setUserLineGroups(_lineGroups);
-  }, [lines]);
+  }, [users, lines]);
 
   return {
     users,
