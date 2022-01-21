@@ -1,5 +1,6 @@
 import * as React from 'react';
 import { Stage, Layer, Line } from 'react-konva';
+import { useBoardData } from '../services/db';
 
 /**
  * array of lines;
@@ -12,12 +13,11 @@ import { Stage, Layer, Line } from 'react-konva';
  *   [100, 400, 300, 400], // line 2: { x: 100, y: 400 }, { x: 300, y: 400 }
  * ]
  */
-const INITIAL_LINES = [];
 
-const DrawingBoard = () => {
-  const [lines, setLines] = React.useState(INITIAL_LINES);
+const DrawingBoard = ({ id }) => {
+  const { userLineGroups, users, myColor, myLines, setMyLines, clear } = useBoardData(id);
   const [isDrawing, setIsDrawing] = React.useState(false);
-  
+
   /**
    * on drag start,
    * enable drawing and
@@ -25,7 +25,7 @@ const DrawingBoard = () => {
    */
   const handleDragStart = () => {
     setIsDrawing(true);
-    setLines([...lines, []]);
+    setMyLines([...myLines, []]);
   };
   
   /**
@@ -46,34 +46,46 @@ const DrawingBoard = () => {
     }
 
     const { evt } = e;
-    const latest = lines.pop();
+    const latest = myLines.pop();
 
-    setLines([...lines, [...latest, evt.clientX, evt.clientY]]);
+    setMyLines([...myLines, [...latest, evt.clientX, evt.clientY]]);
   };
 
   return (
-    <Stage
-      height={window.innerHeight}
-      onDragStart={handleDragStart}
-      onDragEnd={handleDragEnd}
-      onDragMove={handleDragMove}
-      onMouseDown={handleDragStart}
-      onMouseUp={handleDragEnd}
-      onMouseMove={handleDragMove}
-      width={window.innerWidth}
-    >
-      <Layer>
-        {lines && lines.map((points, i) => (
-          <Line
-            key={i}
-            fill="#000"
-            points={points}
-            stroke="#000"
-            strokeWidth={5}
-          />
-        ))}
-      </Layer>
-    </Stage>
+    <div className="fullscreen">
+      <Stage
+        height={window.innerHeight}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+        onDragMove={handleDragMove}
+        onMouseDown={handleDragStart}
+        onMouseUp={handleDragEnd}
+        onMouseMove={handleDragMove}
+        width={window.innerWidth}
+      >
+        <Layer>
+          {userLineGroups.map((lineGroup) => lineGroup.lines && lineGroup.lines.map((points, i) => (
+            <Line
+              key={i}
+              points={points}
+              stroke={lineGroup.color}
+              strokeWidth={5}
+            />
+          )))}
+          {myLines && myLines.map((points, i) => (
+            <Line
+              key={i}
+              points={points}
+              stroke={myColor}
+              strokeWidth={5}
+            />
+          ))}
+        </Layer>
+      </Stage>
+      <button style={{ bottom: '10px', right: '10px', position: 'absolute' }} onClick={clear}>
+        CLEAR
+      </button>
+    </div>
   );
 };
 
