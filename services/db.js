@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { initializeApp } from 'firebase/app';
 import {
   child,
@@ -150,16 +150,15 @@ export const useBoardData = (boardId) => {
   const [lines, setLines] = useState({});
   const [_myLines, _setMyLines] = useState([]);
   const [userLineGroups, setUserLineGroups] = useState([]);
-
-  const getUsers = () => users;
-  const getLines = () => lines;
-  const boardRef = ref(db, `boards/${boardId}`);
+  const boardRef = useRef(ref(db, `boards/${boardId}`));
+  const usersRef = useRef(users);
+  const linesRef = useRef(lines);
 
   /**
    * add this user to the board if we're not already a part of it
    */
   useEffect(() => {
-    getOrCreateUser(boardRef, setUserId);
+    getOrCreateUser(boardRef.current, setUserId);
   }, []);
 
   useEffect(() => {
@@ -170,21 +169,44 @@ export const useBoardData = (boardId) => {
     /**
      * watch for all board user changes (IE. a board user was added)
      */
-    subscribeToUserChanges(userId, boardRef, (id, data) => setUsers({
-      ...getUsers(),
-      [id]: data,
-    }), setUsers);
+    subscribeToUserChanges(
+      userId,
+      boardRef.current,
+      (id, data) => {
+        const newObj = {
+          ...usersRef.current,
+          [id]: data,
+        };
+        setUsers(newObj);
+        usersRef.current = newObj;
+      },
+      (data) => {
+        setUsers(data);
+        usersRef.current = data;
+      },
+    );
 
     /**
      * watch for all line changes (IE. a line is being drawn)
      */
-    subscribeToLineChanges(userId, boardRef, (id, data) => setLines({
-      ...getLines(),
-      [id]: data,
-    }), _setMyLines, () => {
-      _setMyLines([]);
-      setLines({});
-    });
+    subscribeToLineChanges(
+      userId,
+      boardRef.current,
+      (id, data) => {
+        const newObj = {
+          ...linesRef.current,
+          [id]: data,
+        };
+        setLines(newObj);
+        linesRef.current = newObj;
+      },
+      _setMyLines,
+      () => {
+        _setMyLines([]);
+        setLines({});
+        linesRef.current = {};
+      },
+    );
   }, [userId]);
 
   /**
@@ -210,7 +232,7 @@ export const useBoardData = (boardId) => {
     clear: () => {
       setLines({});
       _setMyLines([]);
-      set(child(boardRef, 'lines'), null);
+      set(child(boardRef.current, 'lines'), null);
     },
     myColor: users[userId]?.color,
     myLines: _myLines,
@@ -226,7 +248,7 @@ export const useBoardData = (boardId) => {
         return;
       }
 
-      set(child(boardRef, `lines/${userId}`), _lines);
+      set(child(boardRef.current, `lines/${userId}`), _lines);
     },
   };
 };
