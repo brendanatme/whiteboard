@@ -4,6 +4,7 @@ import {
   child,
   get,
   getDatabase,
+  onChildAdded,
   onChildChanged,
   onValue,
   push,
@@ -87,6 +88,13 @@ const subscribeToUserChanges = (userId, boardRef, cb, batchCb) => {
       userUpdate[key] = user;
     });
     batchCb(userUpdate);
+  });
+
+  onChildAdded(usersRef, (snapshot) => {
+    if (snapshot.key === userId) {
+      return;
+    }
+    cb(snapshot.key, snapshot.val());
   });
 
   onChildChanged(usersRef, (snapshot) => {
