@@ -26,3 +26,32 @@ a {
 .bg-white {
   background-color: #fff;
 }
+
+.ib {
+  display: inline-block;
+}
+
+.abs {
+  position: absolute;
+}
+
+.r-20 { right: 20px; }
+.t-20 { top: 20px; }
+.b-20 { bottom: 20px; }
+
+.m-l-10 { margin-left: 10px; }
+
+.white { color: #fff; }
+
+.circle {
+  border-radius: 40px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 40px;
+  width: 40px;
+}
+
+.flex {
+  display: flex;
+}

@@ -173,7 +173,10 @@ export const useBoardData = (boardId) => {
     subscribeToLineChanges(userId, boardRef, (id, data) => setLines({
       ...getLines(),
       [id]: data,
-    }), _setMyLines, () => setLines({}));
+    }), _setMyLines, () => {
+      _setMyLines([]);
+      setLines({});
+    });
   }, [userId]);
 
   /**
@@ -194,7 +197,7 @@ export const useBoardData = (boardId) => {
   }, [users, lines]);
 
   return {
-    users,
+    users: Object.values(users),
     userLineGroups,
     clear: () => {
       setLines({});
@@ -206,8 +209,11 @@ export const useBoardData = (boardId) => {
     setMyLines: (_lines) => {
       _setMyLines(_lines);
 
-      // if no user id yet, or last line is empty (no new data to fill),
-      // do not send any data to server
+      /**
+       * if no user id yet, or last line is empty
+       * (we do this when we start a new line, but there is no data in it yet),
+       * do not send any data to server
+       */
       if (!userId || !_lines || !_lines.length || !_lines[_lines.length - 1].length) {
         return;
       }

@@ -82,9 +82,20 @@ const DrawingBoard = ({ id }) => {
           ))}
         </Layer>
       </Stage>
-      <button style={{ bottom: '10px', right: '10px', position: 'absolute' }} onClick={clear}>
+      <button className="abs r-20 b-20" onClick={clear}>
         CLEAR
       </button>
+      <div className="abs t-20 r-20 flex">
+        {users.map((user, i) => (
+          <div
+            style={{ background: user.color }}
+            key={i}
+            className="ml-10 white circle"
+          >
+            {i+1}
+          </div>
+        ))}
+      </div>
     </div>
   );
 };
